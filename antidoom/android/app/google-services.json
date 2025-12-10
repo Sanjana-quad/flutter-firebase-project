@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1000546018264",
+    "project_id": "antidoom-on-fire",
+    "storage_bucket": "antidoom-on-fire.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1000546018264:android:271270cd52ee8ca34688ad",
+        "android_client_info": {
+          "package_name": "com.example.antidoom"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbrrwkRTvlq_qn__4brwRaCVODYuREqSk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
