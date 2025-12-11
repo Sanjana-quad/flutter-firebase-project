@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart'; // for debugPrint
+import 'dart:async' as async;
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -45,13 +45,19 @@ class _AuthScreenState extends State<AuthScreen> {
         await auth.signInWithEmailAndPassword(
           email: email,
           password: password,
-        );
+        ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw async.TimeoutException('Authentication request timed out'),
+      );
       } else {
         // Sign up
         await auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
-        );
+        ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw async.TimeoutException('Authentication request timed out'),
+      );
       }
 
       // AuthGate will react to authStateChanges and navigate for us

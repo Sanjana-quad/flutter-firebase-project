@@ -1,5 +1,6 @@
 // lib/screens/review_screen.dart
 import 'package:flutter/material.dart';
+// ignore: unused_import
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/deck.dart';
@@ -29,19 +30,23 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     // Subscribe once to initial list (not streaming UI here; we want a static review set snapshot)
     _cardService.streamCards().first.then((cards) {
-      setState(() {
-        _cards = cards;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _cards = cards;
+          _loading = false;
+        });
+      }
     }).catchError((e) {
-      setState(() {
-        _loading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load cards: $e')));
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load cards: $e')));
+      }
     });
   }
 
-  void _nextCard({required bool countedAsKnown}) async {
+  void nextCard({required bool countedAsKnown}) async {
     if (_cards.isEmpty) return;
 
     final current = _cards[_currentIndex];
@@ -118,10 +123,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       // Again (treat as reviewed but user failed to recall)
                       await _cardService.markReviewed(card.id, incrementBy: 1);
                       // For future SR, we might adjust 'ease' differently; for now both increment
-                      setState(() {
-                        _showBack = false;
-                        _currentIndex = (_currentIndex + 1) % _cards.length;
-                      });
+                      if (mounted) {
+                        setState(() {
+                          _showBack = false;
+                          _currentIndex = (_currentIndex + 1) % _cards.length;
+                        });
+                      }
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                     child: const Text('Again'),
@@ -133,10 +140,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     onPressed: !_showBack ? null : () async {
                       // Got it
                       await _cardService.markReviewed(card.id, incrementBy: 1);
-                      setState(() {
-                        _showBack = false;
-                        _currentIndex = (_currentIndex + 1) % _cards.length;
-                      });
+                      if (mounted) {
+                        setState(() {
+                          _showBack = false;
+                          _currentIndex = (_currentIndex + 1) % _cards.length;
+                        });
+                      }
                     },
                     child: const Text('Got it'),
                   ),

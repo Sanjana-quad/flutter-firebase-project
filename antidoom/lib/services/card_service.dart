@@ -1,5 +1,6 @@
 // lib/services/card_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/card_item.dart';
 
 class CardService {
@@ -56,19 +57,27 @@ class CardService {
 
   // Update review metadata: set lastReviewedAt to now and increment timesReviewed
   Future<void> markReviewed(String cardId, {int incrementBy = 1}) async {
-    final now = Timestamp.fromDate(DateTime.now());
-    final docRef = _cardsRef.doc(cardId);
-
-    // Use transaction to be safe
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(docRef);
+    try {
+      final now = Timestamp.fromDate(DateTime.now());
+      final docRef = _cardsRef.doc(cardId);
+      
+      // Get current data first
+      final snap = await docRef.get();
       if (!snap.exists) return;
+      
       final currentTimes = (snap.data()?['timesReviewed'] as num?)?.toInt() ?? 0;
-      tx.update(docRef, {
+      
+      // Update without transaction to avoid threading issues on Windows
+      await docRef.update({
         'lastReviewedAt': now,
         'timesReviewed': currentTimes + incrementBy,
         'updatedAt': now,
       });
-    });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error marking card as reviewed: $e');
+      }
+      rethrow;
+    }
   }
 }

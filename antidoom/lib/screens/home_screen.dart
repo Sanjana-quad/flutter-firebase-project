@@ -1,13 +1,29 @@
+import 'package:antidoom/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/deck.dart';
 import '../services/deck_service.dart';
+
 import 'deck_detail_screen.dart';
 
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize notifications when HomeScreen loads
+    NotificationService().init().catchError((e) {
+      debugPrint('Error initializing notifications: $e');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,16 +43,37 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your Decks'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-          ),
-        ],
-      ),
+  title: const Text('Your Decks'),
+  actions: [
+    PopupMenuButton<String>(
+      onSelected: (v) async {
+        if (v == 'logout') {
+          await FirebaseAuth.instance.signOut();
+        } else if (v == 'reminder') {
+          // For MVP, schedule a daily reminder at 8 AM local time
+          // Use id = 0 for daily reminder
+          await NotificationService().scheduleDailyNotification(
+            id: 0,
+            title: 'FlashFocus • Review Today',
+            body: 'You have decks waiting — spend 10 minutes reviewing your cards.',
+            hour: 8,
+            minute: 0,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Daily reminder set at 8:00 AM')));
+        } else if (v == 'cancel_reminder') {
+          await NotificationService().cancel(0);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Daily reminder canceled')));
+        }
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'reminder', child: Text('Set daily reminder (8:00 AM)')),
+        PopupMenuItem(value: 'cancel_reminder', child: Text('Cancel daily reminder')),
+        PopupMenuItem(value: 'logout', child: Text('Logout')),
+      ],
+    ),
+  ],
+),
+
       body: StreamBuilder<List<Deck>>(
         stream: deckService.streamDecks(),
         builder: (context, snapshot) {
@@ -61,14 +98,14 @@ class HomeScreen extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: decks.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final deck = decks[index];
               return ListTile(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                tileColor: Colors.indigo.withOpacity(0.05),
+                tileColor: Colors.indigo.withValues(alpha: 0.05),
                 title: Text(deck.title),
                 subtitle: deck.description != null && deck.description!.isNotEmpty
                     ? Text(deck.description!)

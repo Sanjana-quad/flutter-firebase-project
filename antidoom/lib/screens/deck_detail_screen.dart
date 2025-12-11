@@ -34,66 +34,116 @@ class DeckDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<List<CardItem>>(
-        stream: cardService.streamCards(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+      // inside DeckDetailScreen build(), replace the StreamBuilder<List<CardItem>>(...) with:
 
-          final cards = snapshot.data ?? [];
+body: StreamBuilder<List<CardItem>>(
+  stream: cardService.streamCards(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (snapshot.hasError) {
+      return Center(child: Text('Error: ${snapshot.error}'));
+    }
 
-          if (cards.isEmpty) {
-            return Center(
-              child: Text('No cards yet. Tap + to add one.'),
-            );
-          }
+    final cards = snapshot.data ?? [];
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: cards.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final c = cards[i];
-              return ListTile(
-                title: Text(c.front),
-                subtitle: Text(
-                  c.back.length > 80 ? '${c.back.substring(0, 80)}...' : c.back,
-                ),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (value) async {
-                    if (value == 'delete') {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Delete card'),
-                          content: const Text('Are you sure?'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-                            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Delete')),
-                          ],
-                        ),
-                      );
-                      if (confirmed == true) {
-                        await cardService.deleteCard(c.id);
-                      }
-                    } else if (value == 'edit') {
-                      _showEditCardDialog(context, cardService, c);
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
+    // Compute stats
+    final total = cards.length;
+    final startOfToday = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+    final reviewedToday = cards.where((c) {
+      final lr = c.lastReviewedAt;
+      if (lr == null) return false;
+      return lr.isAfter(startOfToday) || lr.isAtSameMomentAs(startOfToday);
+    }).length;
+
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(deck.title, style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 4),
+                    Text(
+                      deck.description ?? 'No description',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
-              );
-            },
-          );
-        },
-      ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('$total cards', style: Theme.of(context).textTheme.bodyMedium),
+                  const SizedBox(height: 4),
+                  Text('$reviewedToday reviewed today', style: Theme.of(context).textTheme.bodySmall),
+                ],
+              )
+            ],
+          ),
+        ),
+
+        const Divider(height: 0),
+
+        // Cards list (existing list)
+        Expanded(
+          child: cards.isEmpty
+              ? const Center(child: Text('No cards yet. Tap + to add one.'))
+              : ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: cards.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final c = cards[i];
+                    return ListTile(
+                      title: Text(c.front),
+                      subtitle: Text(
+                        c.back.length > 80 ? '${c.back.substring(0, 80)}...' : c.back,
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) async {
+                          if (value == 'delete') {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Delete card'),
+                                content: const Text('Are you sure?'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                                  TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Delete')),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true) {
+                              await cardService.deleteCard(c.id);
+                            }
+                          } else if (value == 'edit') {
+                            _showEditCardDialog(context, cardService, c);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  },
+),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreateCardDialog(context, cardService),
         child: const Icon(Icons.add),
