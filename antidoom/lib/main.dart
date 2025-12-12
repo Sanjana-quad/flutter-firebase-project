@@ -9,6 +9,9 @@ import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/notification_service.dart';
 
+import 'package:provider/provider.dart';
+import 'services/settings_service.dart';
+import 'providers/ui_settings_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +28,15 @@ void main() async {
     
     
   await NotificationService().init();
-  runApp(const FlashFocusApp());
+  final settingsService = SettingsService();
+  final settings = await settingsService.load();
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => UISettingsProvider(settings, settingsService),
+      child: const FlashFocusApp(),
+    ),
+  );
 }
 
 class FlashFocusApp extends StatelessWidget {
